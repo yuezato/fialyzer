@@ -243,6 +243,7 @@ let rec of_absform = function
   | F.TyUnion {elements; _} ->
      List.map ~f:of_absform elements
      |> union_list
+  | F.TyMap _
   | F.TyAnyMap _ -> of_elem TyAnyMap
   | F.TyPredef {name="string"; args=[]; _}
   | F.TyPredef {name="nonempty_string"; args=[]; _} ->
@@ -268,7 +269,6 @@ let rec of_absform = function
   | F.TyBinOp _
   | F.TyUnaryOp _
   | F.TyRange _
-  | F.TyMap _
   | F.TyFunAny _
   | F.TyFunAnyArity _
   | F.TyContFun _
