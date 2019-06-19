@@ -14,6 +14,6 @@ for beam in $(ls ${dir}/*.beam); do
   testname=$(basename $beam .beam)
   expected="${dir}/${testname}.expected"
   output="${dir}/${testname}.output"
-  time ($fialyzer --plt $plt $beam &> $output) &>> $performance
+  time ($fialyzer --plt $plt $beam > $output 2>&1) >> $performance 2>&1
   diff -u $expected $output
 done
