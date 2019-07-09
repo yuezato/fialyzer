@@ -231,6 +231,13 @@ let rec of_absform = function
   | F.TyAnyMap _ -> of_elem TyAnyMap
   | F.TyPredef {name="string"; args=[]; _} ->
      of_elem (TyList (of_elem TyNumber))
+  | F.TyRecord {name; field_types; _} ->
+    let elem_types =
+      of_elem (TySingleton (Constant.Atom name)) ::
+        (field_types |> List.map ~f:(fun (F.RecordFieldType f) -> f.ty)
+                     |> List.map ~f:of_absform)
+    in
+    of_elem (TyTuple elem_types)
   | F.TyPredef {name="pid"; args=[]; _}
   | F.TyPredef {name="port"; args=[]; _}
   | F.TyPredef {name="reference"; args=[]; _}
@@ -266,7 +273,6 @@ let rec of_absform = function
   | F.TyAnyTuple _
   | F.TyUser _
   | F.TyLit _
-  | F.TyRecord _
   | F.TyRemote _
     as other ->
      Log.debug [%here] "not implemented conversion from type: %s" (F.sexp_of_type_t other |> Sexp.to_string_hum);
