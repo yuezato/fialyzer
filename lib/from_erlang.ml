@@ -86,9 +86,28 @@ and extract_match_expr e =
     | F.ExprBody {exprs} ->
        F.ExprBody {exprs = List.(exprs >>= extract_match_expr)}
        |> return_expr is_top acc
-    | ExprBitstr _ ->
-       raise Known_error.(FialyzerError (NotImplemented {issue_links=["https://github.com/dwango/fialyzer/issues/220"];
-                                                         message="support bitstring"}))
+    | ExprBitstr {line; elements} ->
+       let (acc, es') =
+         List.fold_right elements ~init:(acc, []) ~f:(fun (arg: F.expr_bin_element_t) (acc, args) ->
+             match arg with
+             | ExprBinElement {expr; size; tsl} ->
+                let (acc, expr') = extract_match_expr' acc false expr in
+                match size with
+                  Some size ->
+                  let (acc, size') = extract_match_expr' acc false size in
+                  (acc, F.ExprBinElement { expr = expr'; size = Some size'; tsl = tsl } :: args)
+                | None ->
+                  (acc, F.ExprBinElement { expr = expr'; size = None; tsl = tsl } :: args)
+           ) in
+       F.ExprBitstr { line = line; elements = es'}
+       |> return_expr is_top acc
+(*
+       begin
+         Caml.print_endline (F.sexp_of_expr_t e |> Sexp.to_string_hum) ;
+         raise Known_error.(FialyzerError (NotImplemented {issue_links=["https://github.com/dwango/fialyzer/issues/220"];
+                                                           message="support bitstring"}))
+       end
+ *)
     | ExprBitstrComprehension _ ->
        raise Known_error.(FialyzerError (NotImplemented {issue_links=["https://github.com/dwango/fialyzer/issues/221"];
                                                          message="support bitstring comprehension"}))
@@ -248,7 +267,15 @@ and extract_match_expr e =
        let (acc, v') = extract_match_expr' acc false a.value in
        (acc, F.ExprAssocExact {a with key = k'; value = v'})
   in
-  let (es, _) = extract_match_expr' [] true e in List.rev es
+  let (es, _) = extract_match_expr' [] true e in
+  let result = List.rev es in
+  begin
+    Caml.print_endline "vvv";
+    Printf.sprintf "Orig: %s\n" (F.sexp_of_expr_t e |> Sexp.to_string_hum) |> Caml.print_endline;
+    List.iter ~f:(fun e -> Caml.print_endline (F.sexp_of_expr_t e |> Sexp.to_string_hum)) result;
+    Caml.print_endline "^^^";
+    result
+  end
 
 let expr_of_atom_or_var = function
   | F.AtomVarAtom {line; atom} -> Constant (line, Atom atom)
